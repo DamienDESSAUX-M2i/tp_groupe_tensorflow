@@ -1,0 +1,2 @@
+Architecture,Top-1 Acc,Top-5 Acc,F1,Speed (ms)
+Baseline,0.01,0.029,0.0,1.89

@@ -1,0 +1,2 @@
+Architecture,Top-1 Acc,Top-5 Acc,F1,Speed (ms)
+MobileNetV2,0.018,0.043,0.006,11.58

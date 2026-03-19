@@ -85,14 +85,37 @@ def encode_labels(
     num_classes = NUMBER_SUPER_CLASSES if label_mode == "coarse" else NUMBER_CLASSES
 
     def encode(x, y):
-        # y = tensorflow.cast(y, tensorflow.int32)
-        # y = tensorflow.reshape(y, [-1])
-        # y = tensorflow.squeeze(y, axis=1)
-        # y = tensorflow.one_hot(y, num_classes)
+        y = tensorflow.squeeze(y, axis=0)
         y = tensorflow.keras.utils.to_categorical(y, num_classes)
         return x, y
 
     return ds.map(encode, num_parallel_calls=tensorflow.data.AUTOTUNE)
+
+
+def resize_images(
+    ds: tensorflow.data.Dataset, image_size: tuple[int, int] = (32, 32)
+) -> tensorflow.data.Dataset:
+    """Resize images in a TensorFlow dataset.
+
+    This function applies a preprocessing step to each element of the input
+    dataset by resizing the image tensor to the specified size while keeping
+    the associated label unchanged.
+
+    Args:
+        ds (tensorflow.data.Dataset): A dataset yielding `(image, label)` pairs,
+            where `image` is a tensor representing an image.
+        image_size (tuple[int], optional): Target size for resizing in the form
+            `(height, width)`. Defaults to (32, 32).
+
+    Returns:
+        tensorflow.data.Dataset: A dataset where each image has been resized
+        to the specified dimensions, with labels unchanged.
+    """
+
+    def preprocess(x, y):
+        return (tensorflow.image.resize(x, (image_size, image_size)), y)
+
+    return ds.map(preprocess, num_parallel_calls=tensorflow.data.AUTOTUNE)
 
 
 def get_augmentation_layer(
@@ -254,6 +277,9 @@ if __name__ == "__main__":
     )
     test_ds_fine_encoded = encode_labels(test_ds_fine_normalized, label_mode=label_mode)
 
-    augmentation_layer = get_augmentation_layer()
+    train_ds_fine_resized_ = resize_images(train_ds_fine_encoded)
+    test_ds_fine_resized = resize_images(test_ds_fine_encoded)
 
-    train_ds_mix_up = encode_labels(train_ds_fine_encoded)
+    train_ds_fine_mix_up = mix_up_images(train_ds_fine_encoded)
+
+    augmentation_layer = get_augmentation_layer()

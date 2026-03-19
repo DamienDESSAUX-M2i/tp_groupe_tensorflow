@@ -1,0 +1,2 @@
+Architecture,Top-1 Acc,Top-5 Acc,F1,Speed (ms)
+ResNet_custom,0.011,0.033,0.001,1.94
