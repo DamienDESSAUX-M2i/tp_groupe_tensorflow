@@ -1,48 +1,53 @@
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import os
 import json
-from sklearn.metrics import classification_report, confusion_matrix, f1_score
+import os
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
-import time 
+import tensorflow as tf
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from tensorflow import keras
 
 ### Phase 4 : Entraînement & Optimisation
 
-def compile_model(model, learning_rate=0.001, loss="categorical_crossentropy", metrics=["accuracy"]):
-    """"
+
+def compile_model(
+    model, learning_rate=0.001, loss="categorical_crossentropy", metrics=["accuracy"]
+):
+    """ "
     Compiler un modèle.
-    
+
     [args]
         model (keras.Model): Le modèle à compiler.
         learning_rate (float): L'optimisateur, par defaut "adam".
         loss (str): La fonction de perte, par defaut "categorical_crossentropy".
         metrics (list): La liste des métriques, par defaut ["accuracy"].
-        
+
     returns
         model (keras.Model): Le modèle compilé.
     """
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
         loss=loss,
-        metrics=metrics
+        metrics=metrics,
     )
     return model
 
+
 def train_model(model, train_ds, train_val, callbacks, epochs=1):
-    """"
+    """ "
     Entrainer un modèle sur les données d'entrainement et de validation.
     Retourne l'historique d'entraînement.
-    
+
     [args]
         model (keras.Model): Le modèle à entrainer.
         X_train (np.ndarray): Les données d'entrainement.
         X_val (np.ndarray): Les données de validation.
         callbacks (list): La liste des callbacks.
         epochs (int): Le nombre d'epochs, par defaut 1.
-        
+
     returns
         history (keras.callbacks.History): L'historique d'entraînement.
     """
@@ -51,23 +56,26 @@ def train_model(model, train_ds, train_val, callbacks, epochs=1):
         validation_data=train_val,
         callbacks=callbacks,
         epochs=epochs,
-        verbose=1
+        verbose=1,
     )
     return history
-    
-def plot_history(history):
-    """"
+
+
+def plot_history(history, model_name):
+    """ "
     Visualiser l'historique d'entraînement.
-    
+
     [args]
         history (keras.callbacks.History): L'historique d'entraînement.
-        
+        model_name (str): Nom du modèle.
+
     returns
         None
     """
     hist = history.history
-    
+
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.suptitle(f"{model_name}")
 
     # LOSS
     axes[0].plot(hist["loss"], label="train loss")
@@ -87,12 +95,12 @@ def plot_history(history):
 
     plt.tight_layout()
     plt.show()
-    
+
 
 def export_history_csv(history, model_name="model", save_dir="output/metric"):
-    """"
+    """ "
     exporter l'historique d'entraînement en CSV.
-    
+
     [args]
         history (keras.callbacks.History): L'historique d'entraînement.
         model_name (str): Le nom du modèle.
@@ -105,12 +113,12 @@ def export_history_csv(history, model_name="model", save_dir="output/metric"):
 
     history_df.to_csv(path, index=False)
     print(f"CSV saved at: {path}")
-    
+
 
 def export_history_json(history, model_name="model", save_dir="output/metric"):
-    """"
+    """ "
     exporter l'historique d'entraînement en json.
-    
+
     [args]
         history (keras.callbacks.History): L'historique d'entraînement.
         model_name (str): Le nom du modèle.
@@ -130,38 +138,39 @@ def export_history_json(history, model_name="model", save_dir="output/metric"):
 
 # ## Phase 5 : Évaluation Complète
 
+
 def compute_metrics(model, test_ds):
     """
     Calculer les métriques globales.
-    
+
     [args]
         model (keras.Model): Le modèle à tester.
         test_ds (tf.data.Dataset): Le jeu de données de test.
-        
+
     returns
         y_true (np.ndarray): Les vraies classes.
         y_pred (np.ndarray): Les predictions.
         y_pred_probs (np.ndarray): Les probabilités de predictions.
     """
-    # TODO
-    #_true = np.concatenate([y.numpy() for _, y in test_ds.unbatch()])
     y_true = np.array([y.numpy() for _, y in test_ds.unbatch()])
+    y_true = np.argmax(y_true, axis=1)
 
     y_pred_probs = model.predict(test_ds)
     y_pred = np.argmax(y_pred_probs, axis=1)
 
     return y_true, y_pred, y_pred_probs
 
+
 def compute_accuracy(y_true, y_pred, y_pred_probs, top_k=3):
     """
     Calculer l'accuracy et le top-k accuracy.
-    
+
     [args]
         y_true (np.ndarray): Les vraies classes.
         y_pred (np.ndarray): Les predictions.
         y_pred_probs (np.ndarray): Les probabilités de predictions.
         top_k (int): Le top-k accuracy, par defaut 3.
-        
+
     returns
         acc (float): L'accuracy.
         top_k_acc (float): Le top-k accuracy.
@@ -179,17 +188,18 @@ def compute_accuracy(y_true, y_pred, y_pred_probs, top_k=3):
 
     return acc, top_k_acc
 
+
 def compute_classification_report(y_true, y_pred, class_names):
     """
     Calculer le rapport de classification.
-    
+
     [args]
         y_true (np.ndarray): Les vraies classes.
         y_pred (np.ndarray): Les predictions.
         class_names (list): Les noms des classes.
         save_dir (str): Le dossier de sauvegarde, DEFAUT "output/figure".
         filename (str): Le nom du fichier image, DEFAUT "confusion_matrix.png".
-        
+
     returns
         report (str): Le rapport de classification.
     """
@@ -197,10 +207,17 @@ def compute_classification_report(y_true, y_pred, class_names):
     report = classification_report(y_true, y_pred, target_names=class_names)
     return report
 
-def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="output/figure", filename="confusion_matrix.png"):
+
+def plot_confusion_matrix(
+    y_true,
+    y_pred,
+    class_names,
+    save_dir="output/figure",
+    filename="confusion_matrix.png",
+):
     """
     Plot et sauvegarder la matrice de confusion.
-    
+
     [args]
         y_true (np.ndarray): Les vraies classes.
         y_pred (np.ndarray): Les predictions.
@@ -221,7 +238,7 @@ def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="output/figure",
         fmt="d",
         xticklabels=class_names,
         yticklabels=class_names,
-        cmap="Blues"
+        cmap="Blues",
     )
 
     plt.xlabel("Predicted")
@@ -231,10 +248,13 @@ def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="output/figure",
     plt.savefig(path)
     plt.close()
 
-def export_results_csv(results_list, save_dir="output/result", filename="model_comparison.csv"):
+
+def export_results_csv(
+    results_list, save_dir="output/result", filename="model_comparison.csv"
+):
     """
     Exporter les résultats en CSV.
-    
+
     [args]
         results_list (list): La liste des résultats.
         save_dir (str): Le dossier de sauvegarde, par défaut "output/result".
@@ -245,8 +265,8 @@ def export_results_csv(results_list, save_dir="output/result", filename="model_c
 
     df = pd.DataFrame(results_list)
     df.to_csv(csv_path, index=False)
-    
-    
+
+
 #    ```python
 #    # Tableau récapitulatif (100 classes):
 #    | Architecture | Top-1 Acc | Top-5 Acc | F1 | Speed (ms) |
@@ -258,21 +278,22 @@ def export_results_csv(results_list, save_dir="output/result", filename="model_c
 #    | Hiérarchique (bonus) | 55% | 80% | 0.53 | 8ms |
 #    ```
 
+
 def evaluate_and_store(model, model_name, test_ds):
-    """"
+    """ "
     FONCTION PRINCIPALE.
     Evaluer le modèle et stocker les résultats.
-    
+
     [args]
         model (keras.Model): Le modèle à tester.
         model_name (str): Le nom du modèle.
         test_ds (tf.data.Dataset): Le jeu de données de test.
-    
+
     returns
-    
+
     """
     results = []
-    
+
     y_true, y_pred, y_pred_probs = compute_metrics(model, test_ds)
 
     acc, top_k_acc = compute_accuracy(y_true, y_pred, y_pred_probs)
@@ -289,20 +310,22 @@ def evaluate_and_store(model, model_name, test_ds):
 
     speed = (end - start) / 100 * 1000  # ms/image
 
-    results.append({
-        "Architecture": model_name,
-        "Top-1 Acc": round(acc, 3),
-        "Top-5 Acc": round(top_k_acc, 3),
-        "F1": round(f1, 3),
-        "Speed (ms)": round(speed, 2)
-    })
-    
+    results.append(
+        {
+            "Architecture": model_name,
+            "Top-1 Acc": round(acc, 3),
+            "Top-5 Acc": round(top_k_acc, 3),
+            "F1": round(f1, 3),
+            "Speed (ms)": round(speed, 2),
+        }
+    )
+
     try:
-        export_results_csv(results)
+        export_results_csv(results, filename=f"{model_name}.csv")
         print("CSV exported !")
     except:
         print("CSV export failed !")
-    
+
 
 if __name__ == "__main__":
     pass
