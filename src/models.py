@@ -7,13 +7,12 @@ import numpy as np
 import cv2
 import os
 
-img_size = 32
 
-def create_baseline_cnn(data_augmentation):
+def create_baseline_cnn(data_augmentation, img_size):
     model_layers = []
     model_layers.append(data_augmentation)
     model_layers.extend([
-        layers.Conv2D(64, 3, activation='relu', padding='same', input_shape=(32, 32, 3)),
+        layers.Conv2D(64, 3, activation='relu', padding='same', input_shape=(img_size, img_size, 3)),
         layers.BatchNormalization(),
         layers.MaxPooling2D(2),
         layers.Dropout(0.25),
@@ -38,7 +37,7 @@ def create_baseline_cnn(data_augmentation):
 
 
 
-def create_baseline_resnet(data_augmentation):
+def create_baseline_resnet(data_augmentation, img_size):
     model_layers = []
     model_layers.append(data_augmentation)
     model_layers.extend([
@@ -67,18 +66,17 @@ def create_baseline_resnet(data_augmentation):
         layers.Dense(100, activation='softmax')
 
     ])
-
     return keras.Sequential(model_layers)
 
 
 
-def create_resnet_custom(data_augmentation, img_size=32):
+def create_resnet_custom(data_augmentation, img_size):
     inputs = keras.Input(shape=(img_size, img_size, 3))
 
     x = data_augmentation(inputs)
 
     # --- BLOC 1 & 2 ---
-    x = layers.Conv2D(8, 3, padding="same", activation="relu")(inputs)
+    x = layers.Conv2D(8, 3, padding="same", activation="relu")(x)
     x = layers.BatchNormalization()(x)
     
     # On garde une trace de x pour le skip
@@ -111,7 +109,7 @@ def create_resnet_custom(data_augmentation, img_size=32):
 
 
 
-def create_mobileNetV2(data_augmentation):
+def create_mobileNetV2(data_augmentation, img_size):
     model_layers = []
     model_layers.append(data_augmentation)
 
@@ -134,7 +132,7 @@ def create_mobileNetV2(data_augmentation):
 
 
 
-def create_efficientNetB0(data_augmentation):
+def create_efficientNetB0(data_augmentation, img_size):
     model_layers = []
     model_layers.append(data_augmentation)
 
@@ -160,13 +158,13 @@ def create_efficientNetB0(data_augmentation):
 
 
 
-def create_hierarchical_model(data_augmentation, img_size=32):
+def create_hierarchical_model(data_augmentation, img_size):
     inputs = keras.Input(shape=(img_size, img_size, 3))
 
     x = data_augmentation(inputs)
 
     # --- TRONC COMMUN (Extraction de caractéristiques) ---
-    x = layers.Conv2D(64, 3, padding="same", activation="relu")(inputs)
+    x = layers.Conv2D(64, 3, padding="same", activation="relu")(x)
     x = layers.BatchNormalization()(x)
     x = layers.MaxPooling2D(2)(x)
     
@@ -194,9 +192,11 @@ def create_hierarchical_model(data_augmentation, img_size=32):
 
 
 
-def create_model(nb_conv2D = 4, start_filters = 32):
+def create_model(data_augmentation, img_size, nb_conv2D = 4, start_filters = 32):
     my_layers = []
     my_layers.append(layers.Input(shape = (img_size, img_size, 3)))
+    my_layers.append(data_augmentation)
+
     filters = start_filters
     for i in range(nb_conv2D):
         my_layers.append(layers.Conv2D(filters, 3, activation="relu", padding="same"))
@@ -218,14 +218,24 @@ def create_model(nb_conv2D = 4, start_filters = 32):
 
 
 if __name__ == "__main__":
-    model = create_hierarchical_model()
+    img_size = 32 
+    # augmentation vide pour le test si besoin
+    dummy_aug = tf.keras.Sequential([layers.Layer()]) 
+
+    # Initialisation
+    model = create_hierarchical_model(dummy_aug, img_size)
     model.summary()
 
+    # Simulation d'une image (Batch de 1)
     test_input = np.random.random((1, img_size, img_size, 3)).astype(np.float32)
     predictions = model.predict(test_input)
     
-    print("Test de prédiction réussi !")
+    print("--- Résultats du Test ---")
     if isinstance(predictions, list):
-        print(f"Sorties multiples détectées : {len(predictions)}")
+        print(f" Sorties multiples détectées : {len(predictions)}")
+        print(f"   1. Super-classes (Coarse) : {predictions[0].shape}") 
+        print(f"   2. Classes fines (Fine)    : {predictions[1].shape}")  
     else:
-        print(f"Forme de la sortie : {predictions.shape}")
+        print(f" Forme de la sortie : {predictions.shape}")
+    
+    print("Test de prédiction réussi !")
