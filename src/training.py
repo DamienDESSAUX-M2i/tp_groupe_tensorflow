@@ -1,29 +1,23 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
-from sklearn.datasets import load_diabetes
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 import os
 import json
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import seaborn as sns
 import time 
 
 ### Phase 4 : Entraînement & Optimisation
 
-def compile_model(model, optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"]):
+def compile_model(model, learning_rate=0.001, loss="categorical_crossentropy", metrics=["accuracy"]):
     """"
     Compiler un modèle.
     
     [args]
         model (keras.Model): Le modèle à compiler.
-        optimizer (str): L'optimisateur, par defaut "adam".
+        learning_rate (float): L'optimisateur, par defaut "adam".
         loss (str): La fonction de perte, par defaut "categorical_crossentropy".
         metrics (list): La liste des métriques, par defaut ["accuracy"].
         
@@ -31,7 +25,7 @@ def compile_model(model, optimizer="adam", loss="categorical_crossentropy", metr
         model (keras.Model): Le modèle compilé.
     """
     model.compile(
-        optimizer=optimizer,
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
         loss=loss,
         metrics=metrics
     )
@@ -95,7 +89,7 @@ def plot_history(history):
     plt.show()
     
 
-def export_history_csv(history, model_name="model", save_dir="src/history"):
+def export_history_csv(history, model_name="model", save_dir="output/metric"):
     """"
     exporter l'historique d'entraînement en CSV.
     
@@ -113,7 +107,7 @@ def export_history_csv(history, model_name="model", save_dir="src/history"):
     print(f"CSV saved at: {path}")
     
 
-def export_history_json(history, model_name="model", save_dir="src/history"):
+def export_history_json(history, model_name="model", save_dir="output/metric"):
     """"
     exporter l'historique d'entraînement en json.
     
@@ -124,7 +118,7 @@ def export_history_json(history, model_name="model", save_dir="src/history"):
     """
     os.makedirs(save_dir, exist_ok=True)
 
-    path = os.path.join(save_dir, f"{model_name}_history.json")
+    path = os.path.join(save_dir, f"{model_name}_metric.json")
 
     with open(path, "w") as f:
         json.dump(history.history, f)
@@ -193,6 +187,8 @@ def compute_classification_report(y_true, y_pred, class_names):
         y_true (np.ndarray): Les vraies classes.
         y_pred (np.ndarray): Les predictions.
         class_names (list): Les noms des classes.
+        save_dir (str): Le dossier de sauvegarde, DEFAUT "output/figure".
+        filename (str): Le nom du fichier image, DEFAUT "confusion_matrix.png".
         
     returns
         report (str): Le rapport de classification.
@@ -201,7 +197,7 @@ def compute_classification_report(y_true, y_pred, class_names):
     report = classification_report(y_true, y_pred, target_names=class_names)
     return report
 
-def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="src/figure", filename="confusion_matrix.png", show=True):
+def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="output/figure", filename="confusion_matrix.png"):
     """
     Plot et sauvegarder la matrice de confusion.
     
@@ -233,21 +229,22 @@ def plot_confusion_matrix(y_true, y_pred, class_names, save_dir="src/figure", fi
     plt.title("Confusion Matrix")
     plt.tight_layout()
     plt.savefig(path)
-    if show:
-        plt.show()
     plt.close()
 
-def export_results_csv(results_list, filename="model_comparison.csv"):
+def export_results_csv(results_list, save_dir="output/result", filename="model_comparison.csv"):
     """
     Exporter les résultats en CSV.
     
     [args]
         results_list (list): La liste des résultats.
-        filename (str): Le nom du fichier CSV, par defaut "model_comparison.csv".
+        save_dir (str): Le dossier de sauvegarde, par défaut "output/result".
+        filename (str): Le nom du fichier CSV, par défaut "model_comparison.csv".
     """
+    os.makedirs(save_dir, exist_ok=True)
+    csv_path = os.path.join(save_dir, filename)
+
     df = pd.DataFrame(results_list)
-    df.to_csv(filename, index=False)
-    print(f"CSV exported at {filename}")
+    df.to_csv(csv_path, index=False)
     
     
 #    ```python
@@ -262,6 +259,18 @@ def export_results_csv(results_list, filename="model_comparison.csv"):
 #    ```
 
 def evaluate_and_store(model, model_name, test_ds):
+    """"
+    FONCTION PRINCIPALE.
+    Evaluer le modèle et stocker les résultats.
+    
+    [args]
+        model (keras.Model): Le modèle à tester.
+        model_name (str): Le nom du modèle.
+        test_ds (tf.data.Dataset): Le jeu de données de test.
+    
+    returns
+    
+    """
     results = []
     
     y_true, y_pred, y_pred_probs = compute_metrics(model, test_ds)
@@ -287,6 +296,12 @@ def evaluate_and_store(model, model_name, test_ds):
         "F1": round(f1, 3),
         "Speed (ms)": round(speed, 2)
     })
+    
+    try:
+        export_results_csv(results)
+        print("CSV exported !")
+    except:
+        print("CSV export failed !")
     
 
 if __name__ == "__main__":
