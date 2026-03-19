@@ -9,8 +9,10 @@ import os
 
 img_size = 32
 
-def create_baseline_cnn():
-    model = keras.Sequential([
+def create_baseline_cnn(data_augmentation):
+    model_layers = []
+    model_layers.append(data_augmentation)
+    model_layers.extend([
         layers.Conv2D(64, 3, activation='relu', padding='same', input_shape=(32, 32, 3)),
         layers.BatchNormalization(),
         layers.MaxPooling2D(2),
@@ -32,12 +34,14 @@ def create_baseline_cnn():
         layers.Dense(100, activation='softmax')
     ])
 
-    return model
+    return keras.Sequential(model_layers)
 
 
 
-def create_baseline_resnet():
-    model = keras.Sequential([
+def create_baseline_resnet(data_augmentation):
+    model_layers = []
+    model_layers.append(data_augmentation)
+    model_layers.extend([
         layers.Conv2D(8, 3, activation= "relu", input_shape = (img_size, img_size, 3), padding = "same", name = "conv1"),
         layers.BatchNormalization(),
 
@@ -64,10 +68,14 @@ def create_baseline_resnet():
 
     ])
 
-    return model
+    return keras.Sequential(model_layers)
 
-def create_resnet_custom(img_size=32):
+
+
+def create_resnet_custom(data_augmentation, img_size=32):
     inputs = keras.Input(shape=(img_size, img_size, 3))
+
+    x = data_augmentation(inputs)
 
     # --- BLOC 1 & 2 ---
     x = layers.Conv2D(8, 3, padding="same", activation="relu")(inputs)
@@ -98,11 +106,15 @@ def create_resnet_custom(img_size=32):
     x = layers.GlobalAveragePooling2D()(x)
     outputs = layers.Dense(100, activation="softmax")(x)
     model = keras.Model(inputs=inputs, outputs=outputs)
+
     return model
 
 
 
-def create_mobileNetV2():
+def create_mobileNetV2(data_augmentation):
+    model_layers = []
+    model_layers.append(data_augmentation)
+
     base_model = keras.applications.MobileNetV2(
         input_shape=(img_size, img_size, 3), 
         include_top=False,
@@ -110,7 +122,7 @@ def create_mobileNetV2():
     )
     base_model.trainable = False
 
-    model = keras.Sequential([
+    model_layers.extend([
         layers.Resizing(img_size, img_size),
         base_model,
         layers.GlobalAveragePooling2D(),
@@ -118,11 +130,14 @@ def create_mobileNetV2():
         layers.Dropout(0.5),
         layers.Dense(100, activation='softmax') 
     ])
-    return model
+    return keras.Sequential(model_layers)
 
 
 
-def create_efficientNetB0():
+def create_efficientNetB0(data_augmentation):
+    model_layers = []
+    model_layers.append(data_augmentation)
+
     base_model = keras.applications.EfficientNetB0(
     input_shape=(img_size, img_size, 3),
     include_top=False,
@@ -133,7 +148,7 @@ def create_efficientNetB0():
     for layer in base_model.layers[:-50]:
         layer.trainable = False
 
-    model = keras.Sequential([
+    model_layers.extend([
         layers.Resizing(img_size, img_size),  # Redimensionner à l'entrée
         base_model,
         layers.GlobalAveragePooling2D(),
@@ -141,12 +156,14 @@ def create_efficientNetB0():
         layers.Dropout(0.5),
         layers.Dense(100, activation='softmax')  # 100 classes!
     ])
-    return model
+    return keras.Sequential(model_layers)
 
 
 
-def create_hierarchical_model(img_size=32):
+def create_hierarchical_model(data_augmentation, img_size=32):
     inputs = keras.Input(shape=(img_size, img_size, 3))
+
+    x = data_augmentation(inputs)
 
     # --- TRONC COMMUN (Extraction de caractéristiques) ---
     x = layers.Conv2D(64, 3, padding="same", activation="relu")(inputs)
