@@ -85,9 +85,11 @@ def encode_labels(
     num_classes = NUMBER_SUPER_CLASSES if label_mode == "coarse" else NUMBER_CLASSES
 
     def encode(x, y):
-        y = tensorflow.cast(y, tensorflow.int32)
-        y = tensorflow.reshape(y, [-1])
-        y = tensorflow.one_hot(y, num_classes)
+        # y = tensorflow.cast(y, tensorflow.int32)
+        # y = tensorflow.reshape(y, [-1])
+        # y = tensorflow.squeeze(y, axis=1)
+        # y = tensorflow.one_hot(y, num_classes)
+        y = tensorflow.keras.utils.to_categorical(y, num_classes)
         return x, y
 
     return ds.map(encode, num_parallel_calls=tensorflow.data.AUTOTUNE)
