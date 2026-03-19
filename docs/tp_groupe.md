@@ -198,7 +198,7 @@ Sequential([
 ```python
 # Avec residual connections
 # 6+ couches conv
-# Skip connections tous les 2 blocs
+# Skip connections tous les 2 blocs -> ne pas faire
 # Batch normalization systématique
 ```
 
@@ -291,7 +291,7 @@ Entraîner chaque architecture.
    - Augmenter epochs si amélioration continue
    - Data augmentation plus/moins agressive?
 
-3. Comparison mid-training
+3. Comparaison mid-training
    - Après 30 epochs, quel modèle en tête?
    - Converge vite / lentement?
    - Overfitting visible?
